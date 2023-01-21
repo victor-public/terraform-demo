@@ -7,8 +7,35 @@ data "aws_api_gateway_rest_api" "target_api" {
   name = var.target_api
 }
 
+data "aws_region" "current" {}
+
 resource "aws_iam_role" "lambda_role" {
   name                = "role_for_documentation"
+
+  inline_policy {
+    name = "${var.target_api}-document-policy"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Action = ["apigateway:POST"],
+          Effect = "Allow"
+          Resource = "arn:aws:apigateway:${data.aws_region.current.name}::/restapis/${data.aws_api_gateway_rest_api.target_api.id}/documentation/versions"
+        },
+        {
+          Action = ["apigateway:GET"],
+          Effect = "Allow"
+          Resource = "arn:aws:apigateway:${data.aws_region.current.name}::/restapis/${data.aws_api_gateway_rest_api.target_api.id}/stages/${var.target_api}-stage/exports/oas30"
+        },
+        {
+          Action = ["apigateway:GET"],
+          Effect = "Allow",
+          Resource = "arn:aws:apigateway:${data.aws_region.current.name}::/restapis/${data.aws_api_gateway_rest_api.target_api.id}/stages/${var.target_api}-stage/exports/swagger"
+        }
+      ]
+    })
+  }
+
   assume_role_policy  = jsonencode({
     Version   = "2012-10-17"
     Statement = [{
@@ -26,10 +53,35 @@ data "archive_file" "zip" {
   output_path = "temp/documentation.zip"
   source {
     content = <<EOF
+import json
+import boto3
+from datetime import datetime
+
+client = boto3.client('apigateway')
+
 def lambda_handler(event, context):
+  format = event['queryStringParameters']['format']
+  timestamp = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+
+  if not format in ["swagger", "oas30"]:
+    format = "swagger"
+
+  client.create_documentation_version(
+    restApiId="${data.aws_api_gateway_rest_api.target_api.id}",
+    documentationVersion="v-{}".format(timestamp),
+    stageName="${var.target_api}-stage",
+    description="Documentation version published on {}".format(timestamp)
+  )
+
+  response = client.get_export(
+    restApiId = "${data.aws_api_gateway_rest_api.target_api.id}",
+    stageName = "${var.target_api}-stage",
+    exportType = format
+  )
+
   return {
     'statusCode': 200,
-    'body': 'ey from code'
+    'body': json.dumps(json.load(response['body']))
   }
 EOF
   filename = "documentation.py"
@@ -113,4 +165,6 @@ resource "aws_api_gateway_integration" "integration" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.lambda.invoke_arn
+   cache_key_parameters   = ["method.request.querystring.format"]
+  cache_namespace         = "${var.target_api}-documentation-cache"
 }
