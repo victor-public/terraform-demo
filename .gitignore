@@ -1,5 +1,6 @@
 # Ignore lambda zip versions
 **/assets/*.zip
+**/temp/**
 
 # Local .terraform directories
 **/.terraform/*

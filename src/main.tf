@@ -30,6 +30,7 @@ module "deployment" {
   source = "./modules/deployment"
   target_api = local.name
   depends_on = [
-    module.api, module.operation_endpoint, module.documentation_endpoint
+    module.api, module.operation_endpoint,
+    module.documentation_endpoint
   ]
 }
