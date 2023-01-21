@@ -3,5 +3,5 @@ def lambda_handler(event, context):
   b = int(event['queryStringParameters']['b'])
   return {
     'statusCode': 200,
-    'body': a * b
+    'body': a / b
   }

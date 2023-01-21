@@ -3,6 +3,11 @@ variable "operation" {
   type = string
 }
 
+variable "description" {
+  description = "Endpoint's description"
+  type = string
+}
+
 variable "target_api" {
   description = "API name"
   type = string
@@ -13,22 +18,17 @@ data "aws_api_gateway_rest_api" "target_api" {
 }
 
 resource "aws_iam_role" "lambda_role" {
-  name = "role_for_${var.operation}_operation"
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
+  name                = "role_for_${var.operation}_operation"
+  assume_role_policy  = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{
+      Action: "sts:AssumeRole",
+      Principal: {
+        Service: "lambda.amazonaws.com"
       },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
+      Effect: "Allow"
+    }]
+  })
 }
 
 data "archive_file" "zip" {
@@ -38,12 +38,12 @@ data "archive_file" "zip" {
 }
 
 resource "aws_lambda_function" "lambda" {
-  function_name = "${var.operation}_lambda"
-  filename         = data.archive_file.zip.output_path
-  source_code_hash = data.archive_file.zip.output_base64sha256
-  role    = aws_iam_role.lambda_role.arn
-  handler = "${var.operation}.lambda_handler"
-  runtime = "python3.9"
+  function_name     = "${var.operation}_lambda"
+  filename          = data.archive_file.zip.output_path
+  source_code_hash  = data.archive_file.zip.output_base64sha256
+  role              = aws_iam_role.lambda_role.arn
+  handler           = "${var.operation}.lambda_handler"
+  runtime           = "python3.9"
 }
 
 resource "aws_lambda_permission" "allow_api_to_use_lambda" {
@@ -51,7 +51,7 @@ resource "aws_lambda_permission" "allow_api_to_use_lambda" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.lambda.arn
   principal     = "apigateway.amazonaws.com"
-  source_arn = "${data.aws_api_gateway_rest_api.target_api.execution_arn}/*/*/*"
+  source_arn    = "${data.aws_api_gateway_rest_api.target_api.execution_arn}/*/*/*"
 }
 
 resource "aws_api_gateway_resource" "resource" {
@@ -60,16 +60,60 @@ resource "aws_api_gateway_resource" "resource" {
   path_part   = var.operation
 }
 
-resource "aws_api_gateway_method" "method" {
-  rest_api_id   = data.aws_api_gateway_rest_api.target_api.id
-  resource_id   = aws_api_gateway_resource.resource.id
-  http_method   = "GET"
-  authorization = "NONE"
+resource "aws_api_gateway_documentation_part" "document_resource" {
+  rest_api_id = data.aws_api_gateway_rest_api.target_api.id
 
-  request_parameters = {
+  location {
+    type   = "RESOURCE"
+    path   = "/${var.operation}"
+  }
+
+  properties  = jsonencode({
+    description = var.description
+  })
+}
+
+resource "aws_api_gateway_method" "method" {
+  rest_api_id         = data.aws_api_gateway_rest_api.target_api.id
+  resource_id         = aws_api_gateway_resource.resource.id
+  http_method         = "GET"
+  authorization       = "NONE"
+  api_key_required    = true
+
+  request_parameters  = {
     "method.request.querystring.a" = true,
     "method.request.querystring.b" = true
   }
+}
+
+resource "aws_api_gateway_documentation_part" "document_param_a" {
+  rest_api_id = data.aws_api_gateway_rest_api.target_api.id
+
+  location {
+    type    = "QUERY_PARAMETER"
+    path    = "/${var.operation}"
+    method  = aws_api_gateway_method.method.http_method
+    name    = "a"
+  }
+
+  properties  = jsonencode({
+    description = "First operand"
+  })
+}
+
+resource "aws_api_gateway_documentation_part" "document_param_b" {
+  rest_api_id = data.aws_api_gateway_rest_api.target_api.id
+
+  location {
+    type    = "QUERY_PARAMETER"
+    path    = "/${var.operation}"
+    method  = aws_api_gateway_method.method.http_method
+    name    = "b"
+  }
+
+  properties  = jsonencode({
+    description = "Second operand"
+  })
 }
 
 resource "aws_api_gateway_method_response" "response_200" {

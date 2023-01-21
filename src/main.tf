@@ -3,16 +3,15 @@ module "api" {
   name = local.name
 }
 
-// TODO: Complete with Lambdas
-
 module "operation_endpoint" {
-  count = length(local.endpoints)
+  count       = length(local.endpoints)
 
-  source = "./modules/operation_endpoint"
-  target_api = local.name
-  operation = local.endpoints[count.index].operation
+  source      = "./modules/operation_endpoint"
+  target_api  = local.name
+  operation   = local.endpoints[count.index].operation
+  description = local.endpoints[count.index].description
 
-  depends_on = [
+  depends_on  = [
     module.api
   ]
 }
