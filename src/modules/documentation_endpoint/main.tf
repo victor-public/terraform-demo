@@ -66,18 +66,26 @@ def lambda_handler(event, context):
   if not format in ["swagger", "oas30"]:
     format = "swagger"
 
-  client.create_documentation_version(
-    restApiId="${data.aws_api_gateway_rest_api.target_api.id}",
-    documentationVersion="v-{}".format(timestamp),
-    stageName="${var.target_api}-stage",
-    description="Documentation version published on {}".format(timestamp)
-  )
+  try:
+    client.create_documentation_version(
+      restApiId="${data.aws_api_gateway_rest_api.target_api.id}",
+      documentationVersion="v-{}".format(timestamp),
+      stageName="${var.target_api}-stage",
+      description="Documentation version published on {}".format(timestamp)
+    )
 
-  response = client.get_export(
-    restApiId = "${data.aws_api_gateway_rest_api.target_api.id}",
-    stageName = "${var.target_api}-stage",
-    exportType = format
-  )
+    response = client.get_export(
+      restApiId = "${data.aws_api_gateway_rest_api.target_api.id}",
+      stageName = "${var.target_api}-stage",
+      exportType = format
+    )
+  except:
+    return {
+      'statusCode': 502,
+      'body': {
+        'message': 'Internal Server Error'
+      }
+    }
 
   return {
     'statusCode': 200,
