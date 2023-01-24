@@ -6,7 +6,7 @@ public endpoints perform basic arithmetic operation examples: sums, multiplicati
 ## Features
 
 - Uniform endpoints running GET methods, where the querystring parameters (a & b) are the factors for the underlying operations.
-- The exact collection of endpoints is configurable (by extending the `endpoints` array at the [configuration](src/confguration.tf) file) For this demo, we only have implemented basic arithmetic operations (sum, diff, mul and div) but you can extend the collection by providing a backend at the [assets folder](src/assets)
+- The exact collection of endpoints is configurable (by extending the `endpoints` array at the [configuration](src/configuration.tf) file) For this demo, we only have implemented basic arithmetic operations (sum, diff, mul and div) but you can extend the collection by providing a backend at the [assets folder](src/assets)
 - An extra `documentation` endpoint. When users hit this API endpoint, they will get a newly generated version of the API's deocumentation describing the current API's configuration. This endpoint accepts a `format` querystring to allow users to decide if they want a Swagger (`swagger`) or OpenAPI (`oas30`) version of the documentation.
 
 ## Infrastructure diagram
