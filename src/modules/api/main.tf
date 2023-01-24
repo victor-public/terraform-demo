@@ -2,6 +2,22 @@ variable "name" {
   description = "API name"
 }
 
+variable "description" {
+  description = "API's description"
+}
+
+variable "terms_of_service" {
+  description = "Link to API's terms of service page"
+}
+
+variable "license" {
+  description = "API's license information"
+}
+
+variable "contact" {
+  description = "API's contact information"
+}
+
 resource "aws_api_gateway_rest_api" "api" {
   name = var.name
   description = "An API for demonstration purposes"
@@ -19,17 +35,10 @@ resource "aws_api_gateway_documentation_part" "document_api" {
 
   properties  = jsonencode({
     info = {
-      description = "A generic description of the API"
-      termsOfService = "Link to this API terms of Service"
-      contact = {
-        name = "Contact name"
-        url = "www.this-api-docs.com"
-        email = "contact@mail.com"
-      }
-      license = {
-        name = "This API's license"
-        url = "www.this-api-license.com"
-      }
+      description = var.description
+      termsOfService = var.terms_of_service
+      contact = var.contact
+      license = var.license
     }
   })
 }

@@ -1,6 +1,10 @@
 module "api" {
-  source = "./modules/api"
-  name = local.name
+  source            = "./modules/api"
+  name              = local.name
+  description       = local.description
+  terms_of_service  = local.terms_of_service
+  contact           = local.contact
+  license           = local.license
 }
 
 module "operation_endpoint" {
